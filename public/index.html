@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conference Attendance Register</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 2rem; }
+    .container { max-width: 700px; margin: 0 auto; }
+    h1 { text-align: center; margin-bottom: 2rem; color: #333; }
+    .card { background: #fff; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .card h2 { margin-bottom: 1rem; color: #555; }
+    label { display: block; margin-bottom: 0.3rem; font-weight: 600; color: #444; }
+    input[type="text"], input[type="email"] { width: 100%; padding: 0.6rem; margin-bottom: 1rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+    button { padding: 0.6rem 1.5rem; background: #4a90d9; color: #fff; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; }
+    button:hover { background: #357abd; }
+    .search-bar { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .search-bar input { flex: 1; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 0.6rem; border-bottom: 1px solid #eee; }
+    th { color: #666; font-size: 0.85rem; text-transform: uppercase; }
+    .delete-btn { background: #e74c3c; padding: 0.3rem 0.8rem; font-size: 0.85rem; }
+    .delete-btn:hover { background: #c0392b; }
+    .msg { padding: 0.8rem; border-radius: 4px; margin-bottom: 1rem; display: none; }
+    .msg.success { background: #d4edda; color: #155724; display: block; }
+    .msg.error { background: #f8d7da; color: #721c24; display: block; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Conference Attendance Register</h1>
+
+    <div class="card">
+      <h2>Register Attendee</h2>
+      <div id="message" class="msg"></div>
+      <form id="registerForm">
+        <label for="name">Full Name</label>
+        <input type="text" id="name" name="name" required>
+        <label for="email">Email Address</label>
+        <input type="email" id="email" name="email" required>
+        <button type="submit">Register</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Attendees</h2>
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search by name or email...">
+        <button onclick="searchAttendees()">Search</button>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Email</th><th>Registered</th><th></th></tr>
+        </thead>
+        <tbody id="attendeesList"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('registerForm');
+    const msgEl = document.getElementById('message');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('email').value;
+
+      const res = await fetch('/api/attendees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email })
+      });
+      const data = await res.json();
+
+      msgEl.className = 'msg ' + (data.success ? 'success' : 'error');
+      msgEl.textContent = data.message;
+      if (data.success) {
+        form.reset();
+        loadAttendees();
+      }
+    });
+
+    async function loadAttendees() {
+      const res = await fetch('/api/attendees');
+      const data = await res.json();
+      renderTable(data);
+    }
+
+    async function searchAttendees() {
+      const q = document.getElementById('searchInput').value;
+      if (!q) return loadAttendees();
+      const res = await fetch('/api/attendees/search?q=' + q);
+      const data = await res.json();
+      renderTable(data);
+    }
+
+    function renderTable(rows) {
+      const tbody = document.getElementById('attendeesList');
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td>${r.name}</td>
+          <td>${r.email}</td>
+          <td>${new Date(r.registered_at).toLocaleString()}</td>
+          <td><button class="delete-btn" onclick="deleteAttendee(${r.id})">Delete</button></td>
+        </tr>
+      `).join('');
+    }
+
+    async function deleteAttendee(id) {
+      await fetch('/api/attendees/' + id, { method: 'DELETE' });
+      loadAttendees();
+    }
+
+    loadAttendees();
+  </script>
+</body>
+</html>
