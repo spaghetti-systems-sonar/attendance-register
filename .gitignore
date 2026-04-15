@@ -1,6 +1,7 @@
 node_modules/
 attendees.db
 package-lock.json
+.scannerwork/
 
 # System Files
 .DS_Store
